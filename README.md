@@ -8,7 +8,7 @@ It is used by the script to copy the refreshed `tokens.json` to the desired loca
 **Example:**
 ```env
 LOCAL_TOKEN_DIR=/home/frank/src/trading/tokens.json
-
+```
 **How to use**
 1. run `uv run -m main`
 2. login and copy paste the Schwab's authenticated URL in termial
