@@ -1,18 +1,31 @@
 ### Environment Configuration
 
-This project requires a `.env` file in the project root.
+#### Required in `.env`
 
-You must define `LOCAL_TOKEN_DIR`, which specifies the **local destination path for `tokens.json`**, including the filename.  
-It is used by the script to copy the refreshed `tokens.json` to the desired local directory.
+-   `SCHWAB_APP_KEY`
+-   `SCHWAB_SECRET`
+-   `CALLBACK_URL`
+-   `LOCAL_TOKEN_PATH`
+    **destination paths** for where the generated `tokens.json` should be copied after authentication. **file path** (including filename). Example: `/home/yourname/src/trading/tokens.json`
 
-**Example:**
+#### Optional
 
-```env
-LOCAL_TOKEN_DIR=/home/frank/src/trading/tokens.json
+-   `REMOTE_TOKEN_PATH`  
+    Remote **file path** (including filename) in `scp` format where `tokens.json` should be copied, e.g. `user@host:/path/to/tokens.json`.  
+    If not set, the remote copy step is skipped.
+
+### Usage
+
+```bash
+uv run -m main
 ```
 
-**How to use**
+Follow the prompt to paste the authenticated redirect URL. Once complete, `tokens.json` will be updated and pushed to the configured destinations.
 
-1. run `uv run -m main`
-2. login and copy paste the Schwab's authenticated URL in termial
-3. Done. the generated tokens.json file is pasted & updated to the designated location
+### How It Works
+
+1. Launches a browser to complete Schwab OAuth authentication.
+2. Exchanges the authorization code for access + refresh tokens.
+3. Writes a fresh `tokens.json` in the project directory.
+4. Copies `tokens.json` to the configured local path.
+5. Optionally copies `tokens.json` to the configured remote path via `scp`.

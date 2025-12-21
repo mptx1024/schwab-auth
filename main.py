@@ -8,16 +8,40 @@ from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
+def _run(cmd: list[str], label: str) -> None:
+        print(f"{label}: running -> {' '.join(cmd)}")
+        result = subprocess.run(cmd, text=True, capture_output=True)
+        if result.returncode == 0:
+            print(f"[{label}: SUCCESS (exit={result.returncode})")
+            if result.stdout:
+                print(f"[{label}: stdout:\n{result.stdout.strip()}")
+            if result.stderr:
+                print(f"[{label}: stderr:\n{result.stderr.strip()}")
+            return
 
-def push_tokens(local_path: str, remote: str, local_copy_path: str) -> None:
+        # Failure case
+        print(f"[{label}: FAILED (exit={result.returncode})")
+        if result.stdout:
+            print(f"[{label}: stdout:\n{result.stdout.strip()}")
+        if result.stderr:
+            print(f"[{label}: stderr:\n{result.stderr.strip()}")
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            cmd,
+            output=result.stdout,
+            stderr=result.stderr,
+        )
+
+
+def push_tokens(new_tokens_path: str,local_dest_path: str, remote_dest_path: str=None, ) -> None:
     """Copy tokens.json to the remote server AND to a local project path."""
 
-    # 1) Copy to remote server
+    # 1) Copy to local project directory
+    _run(["scp", new_tokens_path, local_dest_path], "Copy tokens to local")
+    # 2) Copy to remote server
     # remote like: "user@server:/opt/trading/secrets/tokens.json"
-    subprocess.run(["scp", local_path, remote], check=True)
-
-    # 2) Copy to local project directory (scp works for local file copies too)
-    subprocess.run(["scp", local_path, local_copy_path], check=True)
+    if remote_dest_path is not None:
+      _run(["scp", new_tokens_path, remote_dest_path], "Copy tokens to remote")
 
 def main() -> None:
     # python-dotenv reads  .env file and injects those key/value pairs into os.environ
@@ -26,7 +50,7 @@ def main() -> None:
 
     schwab_app_key = os.environ["SCHWAB_APP_KEY"]
     schwab_secret = os.environ["SCHWAB_SECRET"]
-    callback_url = os.environ["CALLBACK_URL"]
+    callback_url = os.environ["SCHWAB_CALLBACK_URL"]
     
 
     auth_url = (
@@ -34,16 +58,16 @@ def main() -> None:
         f"?client_id={schwab_app_key}&redirect_uri={callback_url}"
     )
 
-    print(f"[Schwabdev] Open to authenticate: {auth_url}")
+    print(f"Open to authenticate: {auth_url}")
     try:
         webbrowser.open(auth_url)
     except Exception as e:
-        print(f"[Schwabdev] Failed to open browser automatically: {e}")
+        print(f"Failed to open browser automatically: {e}")
 
-    response_url = input("[Schwabdev] After authorizing, paste the address bar url here: ")
+    response_url = input("After authorizing, paste the address bar url here: ")
     code = f"{response_url[response_url.index('code=') + 5:response_url.index('%40')]}@"
 
-    print(f"[Schwabdev] Authorization code obtained: {code}")
+    print(f"Authorization code obtained: {code}")
     # headers = {'Authorization': f'Basic {base64.b64encode(bytes(f"{schwab_app_key}:{schwab_secret}", "utf-8")).decode("utf-8")}','Content-Type': 'application/x-www-form-urlencoded'}
     data = {'grant_type': 'authorization_code','code': code,'redirect_uri': callback_url}
 
@@ -67,12 +91,10 @@ def main() -> None:
 
     # --- Push tokens.json after update ---
     # You’ll want SSH keys set up so this doesn’t prompt for a password each time.
-    # Toggle by setting PUSH_TOKENS=1 in your environment or .env.
-    # if os.environ.get("PUSH_TOKENS") == "1":
     push_tokens(
-        local_path=str(tokens_path),
-        remote=os.environ["REMOTE_TOKEN_DIR"],
-        local_copy_path=os.environ["LOCAL_TOKEN_DIR"],
+        new_tokens_path=str(tokens_path),
+        remote_dest_path=os.environ["REMOTE_TOKEN_PATH"] if "REMOTE_TOKEN_PATH" in os.environ else None,
+        local_dest_path=os.environ["LOCAL_TOKEN_PATH"],
     )
 
 if __name__ == "__main__":
