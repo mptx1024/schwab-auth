@@ -51,7 +51,7 @@ def main() -> None:
     schwab_app_key = os.environ["SCHWAB_APP_KEY"]
     schwab_secret = os.environ["SCHWAB_SECRET"]
     callback_url = os.environ["SCHWAB_CALLBACK_URL"]
-    
+    ——
 
     auth_url = (
         "https://api.schwabapi.com/v1/oauth/authorize"
